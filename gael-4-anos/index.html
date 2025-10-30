@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <!-- Open Graph para WhatsApp e redes sociais TROCAR ESSAS INFOS-->
+  <meta property="og:title" content="Galeria de Fotos do Gael - 4 anos" />
+  <meta property="og:description" content="Veja e baixe as fotos da festa do Gael!" />
+  <meta property="og:image" content="https://doceamorfotografia.s3.sa-east-1.amazonaws.com/gael-4-anos/Gael-4-anos-previa-zap.jpg" />
+  <meta property="og:url" content="https://doceamorfotografia.github.io/gael-4-anos" />
+  <meta property="og:type" content="website" />
+
+  <title>Galeria de Fotos do Gael - 4 anos</title> <!-- TROCAR ESSA INFO-->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+  <style>
+    .fade-in { animation: fadeIn 0.3s ease forwards; }
+    .fade-out { animation: fadeOut 0.3s ease forwards; }
+    @keyframes fadeIn { 0% {opacity:0; transform: scale(0.95);} 100% {opacity:1; transform: scale(1);} }
+    @keyframes fadeOut { 0% {opacity:1; transform: scale(1);} 100% {opacity:0; transform: scale(0.95);} }
+  </style>
+</head>
+<body class="bg-blue-50 font-sans">
+
+  <!-- Cabeçalho TROCAR O NOME E IDADE DO ANIVERSARIANTE E A IMAGEM DE CABEÇALHO-->
+  <header class="relative w-full h-56 sm:h-64 md:h-80 overflow-hidden">
+    <img src="https://doceamorfotografia.s3.sa-east-1.amazonaws.com/gael-4-anos/baixa/Gael-4-anos-baixa-007.jpg" 
+         alt="Capa" class="w-full h-full object-cover"/>
+    <div class="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center px-4">
+      <h1 class="text-white text-2xl sm:text-3xl md:text-5xl font-bold text-center">Gael 4 anos</h1>
+    </div>
+  </header>
+
+  <!-- logo -->
+  <div class="container mx-auto px-4 py-6 flex justify-center">
+    <img src="logo.png" alt="Logo" class="mt-4 w-48 sm:w-40 md:w-48 lg:w-56 object-contain">
+  </div>
+
+  <!-- Botões de ação TROCAR LINK-->
+  <div class="container mx-auto px-4 py-6 flex flex-col sm:flex-row justify-center gap-4">
+    <a href="https://doceamorfotografia.s3.sa-east-1.amazonaws.com/gael-4-anos/gael-4-anos.zip" 
+       class="flex items-center justify-center gap-2 bg-white/30 backdrop-blur-sm border border-white/50 text-blue-400 text-sm px-4 py-2 rounded-lg shadow hover:bg-white/40 transition transform hover:scale-105"
+       download>
+      📥 Download de Todas as Fotos
+    </a>
+
+    <a href="https://wa.me/5521986685073" target="_blank" class="flex items-center justify-center gap-2 bg-white/30 backdrop-blur-sm border border-white/50 text-green-500 text-sm px-4 py-2 rounded-lg shadow hover:bg-white/40 transition transform hover:scale-105"> 
+      <!-- ícone WhatsApp -->
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 48 48"> 
+        <path fill="#fff" d="M4.9,43.3l2.7-9.8C5.9,30.6,5,27.3,5,24C5,13.5,13.5,5,24,5c5.1,0,9.8,2,13.4,5.6 C41,14.2,43,18.9,43,24c0,10.5-8.5,19-19,19c0,0,0,0,0,0h0c-3.2,0-6.3-0.8-9.1-2.3L4.9,43.3z"></path> 
+        <path fill="#40c351" d="M35.2,12.8c-3-3-6.9-4.6-11.2-4.6C15.3,8.2,8.2,15.3,8.2,24c0,3,0.8,5.9,2.4,8.4L11,33l-1.6,5.8 l6-1.6l0.6,0.3c2.4,1.4,5.2,2.2,8,2.2h0c8.7,0,15.8-7.1,15.8-15.8C39.8,19.8,38.2,15.8,35.2,12.8z"></path> 
+        <path fill="#fff" fill-rule="evenodd" d="M19.3,16c-0.4-0.8-0.7-0.8-1.1-0.8c-0.3,0-0.6,0-0.9,0 s-0.8,0.1-1.3,0.6c-0.4,0.5-1.7,1.6-1.7,4s1.7,4.6,1.9,4.9s3.3,5.3,8.1,7.2c4,1.6,4.8,1.3,5.7,1.2c0.9-0.1,2.8-1.1,3.2-2.3 c0.4-1.1,0.4-2.1,0.3-2.3c-0.1-0.2-0.4-0.3-0.9-0.6s-2.8-1.4-3.2-1.5c-0.4-0.2-0.8-0.2-1.1,0.2c-0.3,0.5-1.2,1.5-1.5,1.9 c-0.3,0.3-0.6,0.4-1,0.1c-0.5-0.2-2-0.7-3.8-2.4c-1.4-1.3-2.4-2.8-2.6-3.3c-0.3-0.5,0-0.7,0.2-1c0.2-0.2,0.5-0.6,0.7-0.8 c0.2-0.3,0.3-0.5,0.5-0.8c0.2-0.3,0.1-0.6,0-0.8C20.6,19.3,19.7,17,19.3,16z" clip-rule="evenodd"></path> 
+      </svg> 
+      Entre em contato e faça seu orçamento 
+    </a>
+    
+    <a href="https://www.instagram.com/doceamor_fotografia" target="_blank" class="flex items-center justify-center gap-2 bg-white/30 backdrop-blur-sm border border-white/50 text-pink-500 text-sm px-4 py-2 rounded-lg shadow hover:bg-white/40 transition transform hover:scale-105"> 
+      <!-- ícone Instagram -->
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 48 48"> 
+        <radialGradient id="igGrad1" cx="19.38" cy="42.035" r="44.899" gradientUnits="userSpaceOnUse"> 
+          <stop offset="0" stop-color="#fd5"/> 
+          <stop offset=".328" stop-color="#ff543f"/> 
+          <stop offset=".348" stop-color="#fc5245"/> 
+          <stop offset=".504" stop-color="#e64771"/> 
+          <stop offset=".643" stop-color="#d53e91"/> 
+          <stop offset=".761" stop-color="#cc39a4"/> 
+          <stop offset=".841" stop-color="#c837ab"/> 
+        </radialGradient> 
+        <path fill="url(#igGrad1)" d="M34.017,41.99l-20,0.019c-4.4,0.004-8.003-3.592-8.008-7.992l-0.019-20 c-0.004-4.4,3.592-8.003,7.992-8.008l20-0.019c4.4-0.004,8.003,3.592,8.008,7.992l0.019,20C42.014,38.383,38.417,41.986,34.017,41.99z"/> 
+        <path fill="#fff" d="M24,31c-3.859,0-7-3.14-7-7s3.141-7,7-7s7,3.14,7,7S27.859,31,24,31z M24,19c-2.757,0-5,2.243-5,5 s2.243,5,5,5s5-2.243,5-5S26.757,19,24,19z"/> 
+        <circle cx="31.5" cy="16.5" r="1.5" fill="#fff"></circle> 
+        <path fill="#fff" d="M30,37H18c-3.859,0-7-3.14-7-7V18c0-3.86,3.141-7,7-7h12c3.859,0,7,3.14,7,7v12 C37,33.86,33.859,37,30,37z M18,13c-2.757,0-5,2.243-5,5v12c0,2.757,2.243,5,5,5h12c2.757,0,5-2.243,5-5V18c0-2.757-2.243-5-5-5H18z"/> 
+      </svg> 
+      Instagram 
+    </a>
+  </div>
+
+  <!-- Galeria -->
+  <main class="container mx-auto px-4 pb-10">
+
+    <!-- Banner de alerta com botão de fechar -->
+  <div id="alert-banner" class="container mx-auto mx-4 my-4 px-4 py-4 mt-4 bg-blue-200 border-l-4 border-blue-500 rounded-lg shadow-md relative space-y-3 animate-bounce-in-slow">
+    
+    <!-- Botão fechar -->
+  <button onclick="closeAlertBanner()" class="absolute top-2 right-2 text-blue-700 font-bold hover:text-blue-900">&times;</button>
+
+    <!-- Informações -->
+    <div class="flex items-start gap-2">
+      <p class="text-sm sm:text-base text-blue-500"><strong>Informações:</strong></p>
+    </div>
+    
+    <!-- Baixa resolução -->
+    <div class="flex items-start gap-2">
+      <p class="text-sm sm:text-base"><strong>Baixa resolução:</strong> ideal para visualização rápida e compartilhamento nas redes sociais.</p>
+    </div>
+
+    <!-- Alta resolução -->
+    <div class="flex items-start gap-2">
+      <p class="text-sm sm:text-base"><strong>Alta resolução:</strong> ideal para impressão.</p>
+    </div>
+
+    <!-- iPhone -->
+    <div class="flex items-start gap-2">
+      <p class="text-sm sm:text-base"><strong>iPhone:</strong> se as fotos não forem salvas automaticamente, clique em <strong>Download</strong> e, quando a foto abrir, <strong>pressione e segure</strong> para escolher <strong>Salvar Imagem</strong>.</p>
+    </div>
+
+    <style>
+    /* Animação de entrada lenta */
+    @keyframes bounce-in-slow {
+      0% { transform: translateY(-100%) scale(0.8); opacity: 0; }
+      50% { transform: translateY(15%) scale(1.05); opacity: 1; }
+      70% { transform: translateY(-5%) scale(0.95); }
+      100% { transform: translateY(0) scale(1); }
+    }
+
+    /* Animação de saída */
+    @keyframes bounce-out {
+      0% { transform: translateY(0) scale(1); opacity: 1; }
+      30% { transform: translateY(-10%) scale(0.95); }
+      100% { transform: translateY(-100%) scale(0.8); opacity: 0; }
+    }
+
+    .animate-bounce-in-slow {
+      animation: bounce-in-slow 1s ease forwards;
+    }
+
+    .animate-bounce-out {
+      animation: bounce-out 0.8s ease forwards;
+    }
+  </style>
+
+  <script>
+    function closeAlertBanner() {
+      const banner = document.getElementById('alert-banner');
+      banner.classList.remove('animate-bounce-in-slow');
+      banner.classList.add('animate-bounce-out');
+      // Remove do DOM depois da animação
+      setTimeout(() => banner.style.display = 'none', 800);
+    }
+  </script>
+
+  </div>
+
+    <div id="gallery" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"></div>
+  </main>
+
+  <!-- Modal de resolução -->
+  <div id="resolution-modal" class="hidden fixed inset-0 flex items-center justify-center z-50 p-4">
+    <div class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
+    <div class="relative bg-white/50 backdrop-blur-lg rounded-xl p-4 text-center space-y-3 max-w-xs w-full shadow-lg fade-in">
+      <h2 class="text-base font-semibold text-white">Escolha a resolução</h2>
+      <div class="flex justify-around">
+        <button id="btn-baixa" class="flex items-center justify-center gap-1 bg-blue-600/30 backdrop-blur-sm border border-white/50 text-white text-xs px-3 py-1 rounded shadow hover:bg-blue-600/40 transition">Baixa Resolução</button>
+        <button id="btn-alta" class="flex items-center justify-center gap-1 bg-green-600/30 backdrop-blur-sm border border-white/50 text-white text-xs px-3 py-1 rounded shadow hover:bg-green-600/40 transition">Alta Resolução</button>
+      </div>
+      <button onclick="closeResolutionModal()" class="mt-1 text-white text-xs hover:text-gray-200 transition">Cancelar</button>
+    </div>
+  </div>
+
+  <script>
+    // Array de imagens - AQUI TEM QUE TROCAR O LINK E A QUANTIDADE DE IMAGENS
+    const images = [];
+    for (let i = 1; i <= 288; i++) {
+      const num = i.toString().padStart(3, '0');
+      images.push({
+        baixa: `https://doceamorfotografia.s3.sa-east-1.amazonaws.com/gael-4-anos/baixa/Gael-4-anos-baixa-${num}.jpg`,
+        alta: `https://doceamorfotografia.s3.sa-east-1.amazonaws.com/gael-4-anos/alta/Gael-4-anos-${num}.jpg`
+      });
+    }
+
+    const gallery = document.getElementById("gallery");
+    let currentIndex = 0;
+
+    // Preencher galeria
+    images.forEach((img, i) => {
+      const div = document.createElement("div");
+      div.className = "relative group border rounded-lg overflow-hidden shadow cursor-pointer transition-transform hover:scale-105";
+      div.innerHTML = `
+        <img src="${img.baixa}" alt="Foto ${i+1}" 
+             class="w-full h-48 sm:h-56 md:h-60 object-cover group-hover:scale-105 transition-transform duration-300"/>
+        <div class="absolute bottom-2 right-2">
+          <button onclick="event.stopPropagation(); openResolutionModal(${i})" 
+                  class="flex items-center justify-center gap-1 bg-white/30 backdrop-blur-sm border border-white/50 text-white text-xs px-2 py-1 rounded shadow hover:bg-white/40 transition">
+            Download
+          </button>
+        </div>
+      `;
+      div.addEventListener("click", () => openLightbox(i));
+      gallery.appendChild(div);
+    });
+
+    // Modal de resolução
+    function openResolutionModal(index) {
+      currentIndex = index;
+      const modal = document.getElementById("resolution-modal");
+      modal.classList.remove("hidden");
+      modal.classList.add("fade-in");
+    }
+
+    function closeResolutionModal() {
+      const modal = document.getElementById("resolution-modal");
+      modal.classList.add("fade-out");
+      setTimeout(() => {
+        modal.classList.add("hidden");
+        modal.classList.remove("fade-in","fade-out");
+      }, 300);
+    }
+
+    // Download direto (sem fetch e sem renomear)
+      function downloadLightbox(resolution) {
+        const url = resolution === 'alta' ? images[currentIndex].alta : images[currentIndex].baixa;
+
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = ""; // navegador usa o nome do arquivo da URL
+        link.target = "_blank"; // ajuda em mobile caso bloqueie
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+
+
+    // Event listeners do modal
+    document.getElementById("btn-baixa").addEventListener("click", () => {
+      downloadLightbox('baixa');
+      closeResolutionModal();
+    });
+
+    document.getElementById("btn-alta").addEventListener("click", () => {
+      downloadLightbox('alta');
+      closeResolutionModal();
+    });
+  </script>
+
+</body>
+
+</html>
