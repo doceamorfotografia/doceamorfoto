@@ -34,6 +34,262 @@ class DataManager {
 
 const dataManager = new DataManager();
 
+class ReminderManager {
+    constructor() {
+        this.storageKey = 'pregnancy_reminders';
+        this.checkInterval = null;
+        this.checkIntervalMs = 10000; // Verifica a cada 10 segundos para melhor precisão
+        this.triggeredReminders = new Set(); // Rastreia lembretes já disparados hoje
+        this.audioContext = null;
+        this.initAudioContext();
+    }
+
+    initAudioContext() {
+        try {
+            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        } catch (e) {
+            console.error('AudioContext não suportado:', e);
+        }
+    }
+
+    getAll() {
+        const data = localStorage.getItem(this.storageKey);
+        return data ? JSON.parse(data) : [];
+    }
+
+    save(reminder) {
+        const reminders = this.getAll();
+        const existingIndex = reminders.findIndex(r => r.id === reminder.id);
+        
+        if (existingIndex >= 0) {
+            reminders[existingIndex] = reminder;
+        } else {
+            reminders.push(reminder);
+        }
+        
+        localStorage.setItem(this.storageKey, JSON.stringify(reminders));
+        this.startChecking();
+    }
+
+    delete(id) {
+        const reminders = this.getAll();
+        const filtered = reminders.filter(r => r.id !== id);
+        localStorage.setItem(this.storageKey, JSON.stringify(filtered));
+        
+        if (filtered.length === 0 && this.checkInterval) {
+            clearInterval(this.checkInterval);
+            this.checkInterval = null;
+        }
+    }
+
+    startChecking() {
+        if (this.checkInterval) {
+            return; // Já está verificando
+        }
+
+        this.checkInterval = setInterval(() => {
+            this.checkReminders();
+        }, this.checkIntervalMs);
+
+        // Verificar imediatamente
+        this.checkReminders();
+    }
+
+    checkReminders() {
+        const reminders = this.getAll();
+        const now = new Date();
+        const currentDay = now.getDay().toString(); // Converter para string para comparação
+        const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+        const todayKey = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
+
+        reminders.forEach(reminder => {
+            if (!reminder.enabled) return;
+
+            // Verificar se é o dia correto (comparar strings)
+            if (!reminder.days || !reminder.days.includes(currentDay)) return;
+
+            // Verificar se é o horário correto
+            if (!reminder.times || !reminder.times.includes(currentTime)) return;
+
+            // Verificar se já disparou hoje neste horário
+            const reminderKey = `${reminder.id}-${currentTime}-${todayKey}`;
+            if (this.triggeredReminders.has(reminderKey)) return;
+
+            // Disparar alarme
+            this.triggerAlarm(reminder);
+            this.triggeredReminders.add(reminderKey);
+        });
+
+        // Limpar lembretes antigos do cache (meia-noite)
+        if (now.getHours() === 0 && now.getMinutes() === 0) {
+            this.triggeredReminders.clear();
+        }
+    }
+
+    triggerAlarm(reminder) {
+        // Pedir permissão para notificações se ainda não foi dada
+        if ('Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission();
+        }
+
+        // Tocar voz do lembrete
+        const textToSpeak = reminder.reminderText || reminder.description || `Lembrete: ${reminder.name}`;
+        this.playAlarmSound(textToSpeak);
+
+        // Mostrar notificação do navegador
+        if ('Notification' in window && Notification.permission === 'granted') {
+            new Notification(`Lembrete: ${reminder.name}`, {
+                body: textToSpeak,
+                icon: '/favicon.ico',
+                tag: reminder.id,
+                requireInteraction: true
+            });
+        } else {
+            // Fallback: alert simples
+            alert(`Lembrete: ${reminder.name}\n${textToSpeak}`);
+        }
+    }
+
+    playAlarmSound(reminderText) {
+        // Usar Web Speech API para texto-para-voz
+        if ('speechSynthesis' in window) {
+            try {
+                // Cancelar qualquer fala anterior
+                window.speechSynthesis.cancel();
+                
+                // Obter vozes disponíveis (pode precisar aguardar o carregamento)
+                let voices = window.speechSynthesis.getVoices();
+                
+                // Se não houver vozes, aguardar o evento de carregamento
+                if (voices.length === 0) {
+                    const loadVoices = () => {
+                        voices = window.speechSynthesis.getVoices();
+                        this.speakWithVoice(reminderText, voices);
+                    };
+                    
+                    window.speechSynthesis.onvoiceschanged = loadVoices;
+                    // Tentar novamente após um pequeno delay
+                    setTimeout(() => {
+                        loadVoices();
+                    }, 100);
+                    return;
+                }
+                
+                this.speakWithVoice(reminderText, voices);
+                
+            } catch (e) {
+                console.error('Erro ao usar síntese de voz:', e);
+                // Fallback para som de alarme se TTS falhar
+                this.playFallbackSound();
+            }
+        } else {
+            console.warn('SpeechSynthesis não suportado, usando som de alarme');
+            this.playFallbackSound();
+        }
+    }
+    
+    speakWithVoice(reminderText, voices) {
+        try {
+                
+            // Procurar por voz feminina (preferência para português brasileiro)
+            let selectedVoice = null;
+            
+            // Primeira tentativa: voz feminina em português brasileiro
+            selectedVoice = voices.find(voice => 
+                (voice.lang.includes('pt') || voice.lang.includes('BR')) && 
+                (voice.name.toLowerCase().includes('female') || 
+                 voice.name.toLowerCase().includes('feminina') ||
+                 voice.name.toLowerCase().includes('fêmea') ||
+                 voice.gender === 'female')
+            );
+            
+            // Segunda tentativa: qualquer voz feminina
+            if (!selectedVoice) {
+                selectedVoice = voices.find(voice => 
+                    voice.gender === 'female' || 
+                    voice.name.toLowerCase().includes('female') ||
+                    voice.name.toLowerCase().includes('feminina')
+                );
+            }
+            
+            // Terceira tentativa: qualquer voz em português
+            if (!selectedVoice && voices.length > 0) {
+                selectedVoice = voices.find(voice => 
+                    voice.lang.includes('pt') || voice.lang.includes('BR')
+                );
+            }
+            
+            // Se não encontrou, usar a primeira voz disponível
+            if (!selectedVoice && voices.length > 0) {
+                selectedVoice = voices[0];
+            }
+            
+            // Criar utterance
+            const utterance = new SpeechSynthesisUtterance(reminderText || 'Lembrete: Hora do seu medicamento');
+            
+            if (selectedVoice) {
+                utterance.voice = selectedVoice;
+            }
+            
+            // Configurar parâmetros da voz
+            utterance.lang = 'pt-BR';
+            utterance.pitch = 1.2; // Tom um pouco mais alto (mais feminino)
+            utterance.rate = 0.9; // Velocidade um pouco mais lenta para clareza
+            utterance.volume = 1.0; // Volume máximo
+            
+            // Falar o texto
+            window.speechSynthesis.speak(utterance);
+            
+            // Repetir após 3 segundos (uma vez)
+            setTimeout(() => {
+                const repeatUtterance = new SpeechSynthesisUtterance(reminderText || 'Lembrete: Hora do seu medicamento');
+                if (selectedVoice) {
+                    repeatUtterance.voice = selectedVoice;
+                }
+                repeatUtterance.lang = 'pt-BR';
+                repeatUtterance.pitch = 1.2;
+                repeatUtterance.rate = 0.9;
+                repeatUtterance.volume = 1.0;
+                window.speechSynthesis.speak(repeatUtterance);
+            }, 3000);
+            
+        } catch (e) {
+            console.error('Erro ao usar síntese de voz:', e);
+            // Fallback para som de alarme se TTS falhar
+            this.playFallbackSound();
+        }
+    }
+
+    playFallbackSound() {
+        // Som de fallback caso TTS não esteja disponível
+        if (!this.audioContext) {
+            this.initAudioContext();
+            if (!this.audioContext) return;
+        }
+
+        try {
+            const oscillator = this.audioContext.createOscillator();
+            const gainNode = this.audioContext.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(this.audioContext.destination);
+
+            oscillator.frequency.value = 800;
+            oscillator.type = 'sine';
+
+            gainNode.gain.setValueAtTime(0.3, this.audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.5);
+
+            oscillator.start(this.audioContext.currentTime);
+            oscillator.stop(this.audioContext.currentTime + 0.5);
+        } catch (e) {
+            console.error('Erro ao tocar som de fallback:', e);
+        }
+    }
+}
+
+const reminderManager = new ReminderManager();
+
 function initTabs() {
     const tabButtons = document.querySelectorAll('.tab-button');
     const tabContents = document.querySelectorAll('.tab-content');
@@ -208,6 +464,58 @@ function openAddDialog(type) {
             }
         }
         
+        // Resetar campos de lembrete
+        if (type === 'medication' || type === 'supplement') {
+            const reminderCheckbox = document.getElementById(`${type}-reminder-enabled`);
+            const reminderConfig = document.getElementById(`${type}-reminder-config`);
+            const reminderTimes = document.getElementById(`${type}-reminder-times`);
+            
+            if (reminderCheckbox) {
+                reminderCheckbox.checked = false;
+            }
+            if (reminderConfig) {
+                reminderConfig.style.display = 'none';
+            }
+            
+            // Resetar dias
+            const dayCheckboxes = reminderConfig?.querySelectorAll('.reminder-day');
+            if (dayCheckboxes) {
+                dayCheckboxes.forEach(cb => {
+                    cb.checked = false;
+                    cb.required = false;
+                });
+            }
+            
+            // Resetar campo de texto
+            const reminderTextInput = document.getElementById(`${type}-reminder-text`);
+            if (reminderTextInput) {
+                reminderTextInput.value = '';
+                reminderTextInput.required = false;
+            }
+            
+            // Resetar horários (manter apenas um)
+            if (reminderTimes) {
+                const timeRows = reminderTimes.querySelectorAll('.reminder-time-row');
+                if (timeRows.length > 1) {
+                    timeRows.forEach((row, index) => {
+                        if (index > 0) row.remove();
+                    });
+                }
+                const firstTimeInput = reminderTimes.querySelector('.reminder-time-input');
+                if (firstTimeInput) {
+                    firstTimeInput.value = '';
+                    firstTimeInput.required = false;
+                }
+            }
+            
+            // Resetar campo de texto do lembrete
+            const reminderTextInput = document.getElementById(`${type}-reminder-text`);
+            if (reminderTextInput) {
+                reminderTextInput.value = '';
+                reminderTextInput.required = false;
+            }
+        }
+        
         // Resetar campos específicos da glicose
         if (type === 'glucose') {
             const insulinCheckbox = document.getElementById('glucose-insulin-taken');
@@ -299,18 +607,40 @@ function saveRecord(event, type) {
         }
 
         const dataType = getDataType(type);
-        dataManager.save(dataType, record);
+        const savedRecord = dataManager.save(dataType, record);
+        
+        // Salvar lembrete se habilitado (após salvar o record para ter o ID)
+        try {
+            if (type === 'medication' || type === 'supplement') {
+                saveReminderForRecord(type, savedRecord);
+            }
+        } catch (error) {
+            // Se houver erro no lembrete, não impede de salvar o registro
+            console.warn('Erro ao salvar lembrete:', error);
+        }
+        
         closeModal(type);
         loadRecords(type);
         alert('Registro salvo com sucesso! ✅');
     } catch (error) {
         alert('Erro ao salvar: ' + error.message);
+        return; // Não fecha o modal em caso de erro
     }
 }
 
 function deleteRecord(type, id) {
     if (confirm('Deseja excluir este registro?')) {
         const dataType = getDataType(type);
+        
+        // Buscar o registro para ver se tem lembrete associado
+        const records = dataManager.getAll(dataType);
+        const record = records.find(r => r.id === id);
+        
+        // Deletar lembrete se existir
+        if (record && record.reminderId) {
+            reminderManager.delete(record.reminderId);
+        }
+        
         dataManager.delete(dataType, id);
         loadRecords(type);
     }
@@ -330,12 +660,144 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
+function saveReminderForRecord(type, record) {
+    const enabledCheckbox = document.getElementById(`${type}-reminder-enabled`);
+    if (!enabledCheckbox || !enabledCheckbox.checked) {
+        // Remover lembrete anterior se existir
+        if (record.reminderId) {
+            reminderManager.delete(record.reminderId);
+        }
+        return;
+    }
+
+    // Coletar dias selecionados
+    const daysContainer = document.getElementById(`${type}-reminder-config`);
+    const dayCheckboxes = daysContainer.querySelectorAll('.reminder-day:checked');
+    const days = Array.from(dayCheckboxes).map(cb => cb.value);
+    
+    if (days.length === 0) {
+        alert('Por favor, selecione pelo menos um dia da semana para o lembrete.');
+        throw new Error('Dias não selecionados');
+    }
+
+    // Coletar horários
+    const timesContainer = document.getElementById(`${type}-reminder-times`);
+    const timeInputs = timesContainer.querySelectorAll('.reminder-time-input');
+    const times = Array.from(timeInputs)
+        .map(input => input.value)
+        .filter(time => time !== '');
+
+    if (times.length === 0) {
+        alert('Por favor, informe pelo menos um horário para o lembrete.');
+        throw new Error('Horários não informados');
+    }
+
+    // Coletar texto do lembrete
+    const reminderTextInput = document.getElementById(`${type}-reminder-text`);
+    const reminderText = reminderTextInput ? reminderTextInput.value.trim() : '';
+    
+    if (!reminderText) {
+        alert('Por favor, informe o texto do lembrete que será falado.');
+        throw new Error('Texto do lembrete não informado');
+    }
+
+    // Criar ou atualizar lembrete
+    const reminderId = record.reminderId || `reminder_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    const reminder = {
+        id: reminderId,
+        recordId: record.id,
+        recordType: type,
+        name: record.name,
+        description: `${record.name} - ${record.dose}`,
+        reminderText: reminderText, // Texto que será falado
+        enabled: true,
+        days: days,
+        times: times
+    };
+
+    reminderManager.save(reminder);
+    record.reminderId = reminderId;
+}
+
+function toggleReminderSection(type) {
+    const checkbox = document.getElementById(`${type}-reminder-enabled`);
+    const configDiv = document.getElementById(`${type}-reminder-config`);
+    
+    if (checkbox && configDiv) {
+        configDiv.style.display = checkbox.checked ? 'block' : 'none';
+        
+        // Se desativado, não exigir campos
+        if (!checkbox.checked) {
+            const dayCheckboxes = configDiv.querySelectorAll('.reminder-day');
+            const timeInputs = configDiv.querySelectorAll('.reminder-time-input');
+            const reminderTextInput = document.getElementById(`${type}-reminder-text`);
+            dayCheckboxes.forEach(cb => cb.required = false);
+            timeInputs.forEach(input => input.required = false);
+            if (reminderTextInput) reminderTextInput.required = false;
+        } else {
+            const dayCheckboxes = configDiv.querySelectorAll('.reminder-day');
+            const timeInputs = configDiv.querySelectorAll('.reminder-time-input');
+            const reminderTextInput = document.getElementById(`${type}-reminder-text`);
+            dayCheckboxes.forEach(cb => cb.required = true);
+            timeInputs.forEach(input => input.required = true);
+            if (reminderTextInput) reminderTextInput.required = true;
+        }
+    }
+}
+
+function addReminderTime(type) {
+    const timesContainer = document.getElementById(`${type}-reminder-times`);
+    if (!timesContainer) return;
+
+    const newTimeRow = document.createElement('div');
+    newTimeRow.className = 'reminder-time-row';
+    newTimeRow.innerHTML = `
+        <input type="time" class="reminder-time-input" required>
+        <button type="button" class="btn-remove-time" onclick="removeReminderTime(this)">
+            <span class="material-icons">close</span>
+        </button>
+    `;
+    timesContainer.appendChild(newTimeRow);
+}
+
+function removeReminderTime(button) {
+    const row = button.closest('.reminder-time-row');
+    const timesContainer = row?.parentElement;
+    
+    // Não permitir remover se for o único horário
+    if (timesContainer && timesContainer.querySelectorAll('.reminder-time-row').length > 1) {
+        row.remove();
+    } else {
+        alert('É necessário ter pelo menos um horário de lembrete.');
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     initTabs();
     const activeTab = document.querySelector('.tab-button.active');
     if (activeTab) {
         const tabId = activeTab.getAttribute('data-tab');
         loadRecords(tabId);
+    }
+    
+    // Solicitar permissão para notificações e iniciar sistema de lembretes
+    if ('Notification' in window && Notification.permission === 'default') {
+        Notification.requestPermission();
+    }
+    
+    // Garantir que as vozes estejam carregadas
+    if ('speechSynthesis' in window) {
+        window.speechSynthesis.getVoices(); // Força o carregamento inicial
+        window.speechSynthesis.onvoiceschanged = () => {
+            // Vozes carregadas
+        };
+    }
+    
+    // Iniciar verificação de lembretes
+    const reminders = reminderManager.getAll();
+    if (reminders.length > 0) {
+        reminderManager.startChecking();
     }
 });
 
