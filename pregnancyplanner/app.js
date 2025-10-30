@@ -61,9 +61,15 @@ function formatDate(dateString) {
 }
 
 function loadRecords(type) {
-    const records = dataManager.getAll(type);
+    const dataType = getDataType(type);
+    const records = dataManager.getAll(dataType);
     const listContainer = document.getElementById(getListId(type));
     const emptyState = document.getElementById('empty-state');
+
+    if (!listContainer) {
+        console.error('List container not found for type:', type);
+        return;
+    }
 
     listContainer.innerHTML = '';
 
@@ -82,12 +88,31 @@ function loadRecords(type) {
 
 function getListId(type) {
     const mapping = {
+        'medication': 'medications-list',
         'medications': 'medications-list',
+        'supplement': 'supplements-list',
         'supplements': 'supplements-list',
         'glucose': 'glucose-list',
         'blood-pressure': 'blood-pressure-list'
     };
     return mapping[type] || '';
+}
+
+function getDataType(type) {
+    // Se já está no plural correto, retorna como está
+    if (type === 'medications' || type === 'supplements' || 
+        type === 'glucose' || type === 'blood-pressure') {
+        return type;
+    }
+    
+    // Converte do singular para plural
+    const mapping = {
+        'medication': 'medications',
+        'supplement': 'supplements',
+        'glucose': 'glucose',
+        'blood-pressure': 'blood-pressure'
+    };
+    return mapping[type] || type;
 }
 
 function createRecordCard(type, record) {
@@ -107,7 +132,12 @@ function createRecordCard(type, record) {
     date.className = 'record-date';
     date.textContent = formatDate(record.date);
 
-    switch (type) {
+    // Normalizar tipo para comparar (pode vir singular ou plural)
+    const normalizedType = type === 'medications' ? 'medication' : 
+                           type === 'supplements' ? 'supplement' : 
+                           type;
+    
+    switch (normalizedType) {
         case 'medication':
         case 'supplement':
             title.textContent = record.name;
@@ -115,7 +145,29 @@ function createRecordCard(type, record) {
             break;
         case 'glucose':
             title.textContent = `${record.value} mg/dL`;
-            subtitle.textContent = 'Valor registrado';
+            const glucoseTypeLabels = {
+                'jejum': 'Jejum',
+                'antes-almoco': 'Antes do Almoço',
+                'depois-almoco': 'Depois do Almoço',
+                'antes-jantar': 'Antes do Jantar',
+                'depois-jantar': 'Depois do Jantar'
+            };
+            let glucoseSubtitle = '';
+            
+            // Compatibilidade com registros antigos
+            if (record.type) {
+                glucoseSubtitle = glucoseTypeLabels[record.type] || record.type;
+            } else {
+                glucoseSubtitle = 'Valor registrado';
+            }
+            
+            if (record.time) {
+                glucoseSubtitle += ` | ${record.time}`;
+            }
+            if (record.insulinTaken && record.insulinUnits !== null && record.insulinUnits !== undefined) {
+                glucoseSubtitle += ` | Insulina: ${record.insulinUnits} unidades`;
+            }
+            subtitle.textContent = glucoseSubtitle;
             break;
         case 'blood-pressure':
             title.textContent = `${record.systolic}/${record.diastolic}`;
@@ -131,7 +183,9 @@ function createRecordCard(type, record) {
     deleteBtn.className = 'delete-button';
     deleteBtn.innerHTML = '<span class="material-icons">delete</span>';
     deleteBtn.title = 'Excluir registro';
-    deleteBtn.onclick = () => deleteRecord(type, record.id);
+    // Normalizar tipo para deleteRecord (pode vir singular ou plural)
+    const deleteType = normalizedType;
+    deleteBtn.onclick = () => deleteRecord(deleteType, record.id);
 
     card.appendChild(info);
     card.appendChild(deleteBtn);
@@ -144,7 +198,7 @@ function openAddDialog(type) {
     if (modal) {
         modal.classList.add('active');
         
-        if (type === 'medication' || type === 'supplement') {
+        if (type === 'medication' || type === 'supplement' || type === 'glucose') {
             const timeInput = document.getElementById(`${type}-time`);
             if (timeInput) {
                 const now = new Date();
@@ -152,6 +206,40 @@ function openAddDialog(type) {
                 const minutes = String(now.getMinutes()).padStart(2, '0');
                 timeInput.value = `${hours}:${minutes}`;
             }
+        }
+        
+        // Resetar campos específicos da glicose
+        if (type === 'glucose') {
+            const insulinCheckbox = document.getElementById('glucose-insulin-taken');
+            const insulinUnitsGroup = document.getElementById('insulin-units-group');
+            const insulinUnitsInput = document.getElementById('glucose-insulin-units');
+            if (insulinCheckbox) {
+                insulinCheckbox.checked = false;
+            }
+            if (insulinUnitsGroup) {
+                insulinUnitsGroup.style.display = 'none';
+            }
+            if (insulinUnitsInput) {
+                insulinUnitsInput.value = '';
+                insulinUnitsInput.required = false;
+            }
+        }
+    }
+}
+
+function toggleInsulinUnits() {
+    const checkbox = document.getElementById('glucose-insulin-taken');
+    const unitsGroup = document.getElementById('insulin-units-group');
+    const unitsInput = document.getElementById('glucose-insulin-units');
+    
+    if (checkbox && unitsGroup && unitsInput) {
+        if (checkbox.checked) {
+            unitsGroup.style.display = 'block';
+            unitsInput.required = true;
+        } else {
+            unitsGroup.style.display = 'none';
+            unitsInput.required = false;
+            unitsInput.value = '';
         }
     }
 }
@@ -189,9 +277,18 @@ function saveRecord(event, type) {
                 };
                 break;
             case 'glucose':
+                const insulinTaken = document.getElementById('glucose-insulin-taken').checked;
                 record = {
-                    value: parseInt(document.getElementById('glucose-value').value)
+                    value: parseInt(document.getElementById('glucose-value').value),
+                    time: document.getElementById('glucose-time').value,
+                    type: document.getElementById('glucose-type').value,
+                    insulinTaken: insulinTaken,
+                    insulinUnits: insulinTaken ? parseFloat(document.getElementById('glucose-insulin-units').value) : null
                 };
+                if (insulinTaken && !document.getElementById('glucose-insulin-units').value) {
+                    alert('Por favor, informe a quantidade de unidades de insulina.');
+                    return;
+                }
                 break;
             case 'blood-pressure':
                 record = {
@@ -201,7 +298,8 @@ function saveRecord(event, type) {
                 break;
         }
 
-        dataManager.save(type, record);
+        const dataType = getDataType(type);
+        dataManager.save(dataType, record);
         closeModal(type);
         loadRecords(type);
         alert('Registro salvo com sucesso! ✅');
@@ -212,7 +310,8 @@ function saveRecord(event, type) {
 
 function deleteRecord(type, id) {
     if (confirm('Deseja excluir este registro?')) {
-        dataManager.delete(type, id);
+        const dataType = getDataType(type);
+        dataManager.delete(dataType, id);
         loadRecords(type);
     }
 }

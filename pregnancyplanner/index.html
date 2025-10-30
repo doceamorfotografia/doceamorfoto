@@ -22,7 +22,7 @@
                 <span class="tab-label">Medicações</span>
             </button>
             <button class="tab-button" data-tab="supplements">
-                <span class="material-icons">vitamins</span>
+                <span class="material-icons">healing</span>
                 <span class="tab-label">Suplementos</span>
             </button>
             <button class="tab-button" data-tab="glucose">
@@ -146,6 +146,31 @@
                 <div class="form-group">
                     <label for="glucose-value">Valor da Glicose (mg/dL) *</label>
                     <input type="number" id="glucose-value" min="0" max="1000" placeholder="Ex: 95" required>
+                </div>
+                <div class="form-group">
+                    <label for="glucose-time">Horário *</label>
+                    <input type="time" id="glucose-time" required>
+                </div>
+                <div class="form-group">
+                    <label for="glucose-type">Tipo de Medição *</label>
+                    <select id="glucose-type" required>
+                        <option value="">Selecione...</option>
+                        <option value="jejum">Jejum</option>
+                        <option value="antes-almoco">Antes do Almoço</option>
+                        <option value="depois-almoco">Depois do Almoço</option>
+                        <option value="antes-jantar">Antes do Jantar</option>
+                        <option value="depois-jantar">Depois do Jantar</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="glucose-insulin-taken" onchange="toggleInsulinUnits()">
+                        Tomou insulina?
+                    </label>
+                </div>
+                <div class="form-group" id="insulin-units-group" style="display: none;">
+                    <label for="glucose-insulin-units">Unidades de Insulina *</label>
+                    <input type="number" id="glucose-insulin-units" min="0" step="0.5" placeholder="Ex: 10">
                 </div>
                 <div class="form-actions">
                     <button type="button" class="btn-secondary" onclick="closeModal('glucose')">Cancelar</button>
