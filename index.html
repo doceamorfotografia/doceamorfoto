@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Planner para gestantes - Gerencie medicações, suplementos, glicose e pressão arterial">
+    <title>Pregnancy Planner</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+</head>
+<body>
+    <div class="app-container">
+        <header class="app-header">
+            <h1 class="app-title"><span class="material-icons">favorite</span> Pregnancy Planner</h1>
+        </header>
+        <nav class="tabs-container">
+            <button class="tab-button active" data-tab="medications">
+                <span class="material-icons">medication</span>
+                <span class="tab-label">Medicações</span>
+            </button>
+            <button class="tab-button" data-tab="supplements">
+                <span class="material-icons">vitamins</span>
+                <span class="tab-label">Suplementos</span>
+            </button>
+            <button class="tab-button" data-tab="glucose">
+                <span class="material-icons">bloodtype</span>
+                <span class="tab-label">Glicose</span>
+            </button>
+            <button class="tab-button" data-tab="blood-pressure">
+                <span class="material-icons">monitor_heart</span>
+                <span class="tab-label">Pressão</span>
+            </button>
+        </nav>
+        <main class="main-content">
+            <section id="medications" class="tab-content active">
+                <div class="content-header">
+                    <h2>Medicações</h2>
+                    <button class="fab-button" onclick="openAddDialog('medication')" title="Adicionar Medicação">
+                        <span class="material-icons">add</span>
+                    </button>
+                </div>
+                <div id="medications-list" class="records-list"></div>
+            </section>
+            <section id="supplements" class="tab-content">
+                <div class="content-header">
+                    <h2>Suplementos</h2>
+                    <button class="fab-button" onclick="openAddDialog('supplement')" title="Adicionar Suplemento">
+                        <span class="material-icons">add</span>
+                    </button>
+                </div>
+                <div id="supplements-list" class="records-list"></div>
+            </section>
+            <section id="glucose" class="tab-content">
+                <div class="content-header">
+                    <h2>Glicose</h2>
+                    <button class="fab-button" onclick="openAddDialog('glucose')" title="Registrar Glicose">
+                        <span class="material-icons">add</span>
+                    </button>
+                </div>
+                <div id="glucose-list" class="records-list"></div>
+            </section>
+            <section id="blood-pressure" class="tab-content">
+                <div class="content-header">
+                    <h2>Pressão Arterial</h2>
+                    <button class="fab-button" onclick="openAddDialog('blood-pressure')" title="Registrar Pressão">
+                        <span class="material-icons">add</span>
+                    </button>
+                </div>
+                <div id="blood-pressure-list" class="records-list"></div>
+            </section>
+        </main>
+        <div class="empty-state" id="empty-state" style="display: none;">
+            <span class="material-icons">inbox</span>
+            <p>Nenhum registro encontrado</p>
+            <p class="empty-state-hint">Clique no botão + para adicionar um novo registro</p>
+        </div>
+    </div>
+    <div id="modal-medication" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Adicionar Medicação</h3>
+                <button class="close-button" onclick="closeModal('medication')">
+                    <span class="material-icons">close</span>
+                </button>
+            </div>
+            <form id="form-medication" onsubmit="saveRecord(event, 'medication')">
+                <div class="form-group">
+                    <label for="medication-name">Nome da Medicação *</label>
+                    <input type="text" id="medication-name" placeholder="Ex: Ácido Fólico" required>
+                </div>
+                <div class="form-group">
+                    <label for="medication-dose">Dose *</label>
+                    <input type="text" id="medication-dose" placeholder="Ex: 400mg" required>
+                </div>
+                <div class="form-group">
+                    <label for="medication-time">Horário *</label>
+                    <input type="time" id="medication-time" required>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn-secondary" onclick="closeModal('medication')">Cancelar</button>
+                    <button type="submit" class="btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div id="modal-supplement" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Adicionar Suplemento</h3>
+                <button class="close-button" onclick="closeModal('supplement')">
+                    <span class="material-icons">close</span>
+                </button>
+            </div>
+            <form id="form-supplement" onsubmit="saveRecord(event, 'supplement')">
+                <div class="form-group">
+                    <label for="supplement-name">Nome do Suplemento *</label>
+                    <input type="text" id="supplement-name" placeholder="Ex: Ferro" required>
+                </div>
+                <div class="form-group">
+                    <label for="supplement-dose">Dose *</label>
+                    <input type="text" id="supplement-dose" placeholder="Ex: 1 comprimido" required>
+                </div>
+                <div class="form-group">
+                    <label for="supplement-time">Horário *</label>
+                    <input type="time" id="supplement-time" required>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn-secondary" onclick="closeModal('supplement')">Cancelar</button>
+                    <button type="submit" class="btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div id="modal-glucose" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Registrar Glicose</h3>
+                <button class="close-button" onclick="closeModal('glucose')">
+                    <span class="material-icons">close</span>
+                </button>
+            </div>
+            <form id="form-glucose" onsubmit="saveRecord(event, 'glucose')">
+                <div class="form-group">
+                    <label for="glucose-value">Valor da Glicose (mg/dL) *</label>
+                    <input type="number" id="glucose-value" min="0" max="1000" placeholder="Ex: 95" required>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn-secondary" onclick="closeModal('glucose')">Cancelar</button>
+                    <button type="submit" class="btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div id="modal-blood-pressure" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Registrar Pressão Arterial</h3>
+                <button class="close-button" onclick="closeModal('blood-pressure')">
+                    <span class="material-icons">close</span>
+                </button>
+            </div>
+            <form id="form-blood-pressure" onsubmit="saveRecord(event, 'blood-pressure')">
+                <div class="form-group">
+                    <label for="bp-systolic">Pressão Sistólica *</label>
+                    <input type="number" id="bp-systolic" min="0" max="300" placeholder="Ex: 120" required>
+                </div>
+                <div class="form-group">
+                    <label for="bp-diastolic">Pressão Diastólica *</label>
+                    <input type="number" id="bp-diastolic" min="0" max="200" placeholder="Ex: 80" required>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn-secondary" onclick="closeModal('blood-pressure')">Cancelar</button>
+                    <button type="submit" class="btn-primary">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>
+
