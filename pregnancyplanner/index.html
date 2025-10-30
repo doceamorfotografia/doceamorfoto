@@ -133,13 +133,6 @@
                                 <span class="material-icons">add</span> Adicionar horário
                             </button>
                         </div>
-                        <div class="form-group">
-                            <label for="medication-reminder-text">Texto do lembrete (será falado por voz feminina) *</label>
-                            <input type="text" id="medication-reminder-text" 
-                                   placeholder="Ex: Hora de tomar sua medicação" 
-                                   maxlength="200" required>
-                            <small class="form-hint">Este texto será falado quando o lembrete tocar</small>
-                        </div>
                     </div>
                 </div>
                 <div class="form-actions">
@@ -203,13 +196,6 @@
                             <button type="button" class="btn-add-time" onclick="addReminderTime('supplement')">
                                 <span class="material-icons">add</span> Adicionar horário
                             </button>
-                        </div>
-                        <div class="form-group">
-                            <label for="supplement-reminder-text">Texto do lembrete (será falado por voz feminina) *</label>
-                            <input type="text" id="supplement-reminder-text" 
-                                   placeholder="Ex: Hora de tomar seu suplemento" 
-                                   maxlength="200" required>
-                            <small class="form-hint">Este texto será falado quando o lembrete tocar</small>
                         </div>
                     </div>
                 </div>
@@ -289,6 +275,223 @@
             </form>
         </div>
     </div>
-    <script src="app.js"></script>
+    <script>
+        // Funções mínimas críticas definidas ANTES do app.js carregar
+        // Para garantir que sempre estejam disponíveis
+        window.openAddDialog = function(type) {
+            console.log('openAddDialog chamado:', type);
+            try {
+                var modal = document.getElementById('modal-' + type);
+                if (!modal) {
+                    console.error('Modal não encontrado:', 'modal-' + type);
+                    return;
+                }
+                modal.classList.add('active');
+                console.log('Modal aberto');
+            } catch(e) {
+                console.error('Erro ao abrir modal:', e);
+                alert('Erro ao abrir formulário: ' + e.message);
+            }
+        };
+        
+        window.closeModal = function(type) {
+            try {
+                var modal = document.getElementById('modal-' + type);
+                if (modal) {
+                    modal.classList.remove('active');
+                    var form = document.getElementById('form-' + type);
+                    if (form) form.reset();
+                }
+            } catch(e) {
+                console.error('Erro ao fechar modal:', e);
+            }
+        };
+        
+        window.saveRecord = function(event, type) {
+            event.preventDefault();
+            
+            // Esta função será sobrescrita pelo app.js quando carregar
+            // Mas temos uma implementação básica como fallback
+            try {
+                var record = {};
+                
+                if (type === 'medication') {
+                    record = {
+                        name: document.getElementById('medication-name').value.trim(),
+                        dose: document.getElementById('medication-dose').value.trim(),
+                        time: document.getElementById('medication-time').value
+                    };
+                } else if (type === 'supplement') {
+                    record = {
+                        name: document.getElementById('supplement-name').value.trim(),
+                        dose: document.getElementById('supplement-dose').value.trim(),
+                        time: document.getElementById('supplement-time').value
+                    };
+                } else if (type === 'glucose') {
+                    var insulinTaken = document.getElementById('glucose-insulin-taken').checked;
+                    record = {
+                        value: parseInt(document.getElementById('glucose-value').value),
+                        time: document.getElementById('glucose-time').value,
+                        type: document.getElementById('glucose-type').value,
+                        insulinTaken: insulinTaken,
+                        insulinUnits: insulinTaken ? parseFloat(document.getElementById('glucose-insulin-units').value) : null
+                    };
+                    if (insulinTaken && !document.getElementById('glucose-insulin-units').value) {
+                        alert('Por favor, informe a quantidade de unidades de insulina.');
+                        return;
+                    }
+                } else if (type === 'blood-pressure') {
+                    record = {
+                        systolic: parseInt(document.getElementById('bp-systolic').value),
+                        diastolic: parseInt(document.getElementById('bp-diastolic').value)
+                    };
+                }
+                
+                // Verificar se dataManager está disponível
+                if (typeof window.dataManager !== 'undefined' && window.dataManager) {
+                    // Usar dataManager se disponível (app.js carregou)
+                    var dataType = type === 'medication' ? 'medications' : 
+                                  type === 'supplement' ? 'supplements' : type;
+                    var savedRecord = window.dataManager.save(dataType, record);
+                    
+                    // Salvar lembrete se habilitado
+                    try {
+                        if ((type === 'medication' || type === 'supplement') && typeof window.saveReminderForRecord === 'function') {
+                            window.saveReminderForRecord(type, savedRecord);
+                        }
+                    } catch(e) {
+                        console.warn('Erro ao salvar lembrete:', e);
+                    }
+                    
+                    window.closeModal(type);
+                    alert('Registro salvo com sucesso! ✅');
+                    
+                    // Aguardar um pouco e então chamar loadRecords e garantir que a aba está ativa
+                    setTimeout(function() {
+                        if (typeof window.loadRecords === 'function') {
+                            // Converter tipo para plural (ID da aba)
+                            var tabId = type === 'medication' ? 'medications' : 
+                                       type === 'supplement' ? 'supplements' : type;
+                            
+                            // Garantir que a aba correta está ativa e visível
+                            try {
+                                var tabButton = document.querySelector('[data-tab="' + tabId + '"]');
+                                var tabContent = document.getElementById(tabId);
+                                
+                                if (tabButton && tabContent) {
+                                    // Remover active de todas as tabs
+                                    document.querySelectorAll('.tab-button').forEach(function(btn) {
+                                        btn.classList.remove('active');
+                                    });
+                                    document.querySelectorAll('.tab-content').forEach(function(content) {
+                                        content.classList.remove('active');
+                                    });
+                                    
+                                    // Ativar a aba correta
+                                    tabButton.classList.add('active');
+                                    tabContent.classList.add('active');
+                                }
+                            } catch(e) {
+                                console.error('Erro ao ativar aba:', e);
+                            }
+                            
+                            // Carregar registros na aba correta
+                            window.loadRecords(tabId);
+                        } else {
+                            // Se loadRecords não está disponível, recarregar a página
+                            location.reload();
+                        }
+                    }, 100);
+                } else {
+                    // Fallback: salvar diretamente no localStorage
+                    var storageKeys = {
+                        'medication': 'pregnancy_medications',
+                        'supplement': 'pregnancy_supplements',
+                        'glucose': 'pregnancy_glucose',
+                        'blood-pressure': 'pregnancy_blood_pressure'
+                    };
+                    
+                    var storageKey = storageKeys[type];
+                    if (storageKey) {
+                        var existing = localStorage.getItem(storageKey);
+                        var records = existing ? JSON.parse(existing) : [];
+                        record.id = Date.now();
+                        record.date = new Date().toISOString();
+                        records.unshift(record);
+                        localStorage.setItem(storageKey, JSON.stringify(records));
+                        
+                        window.closeModal(type);
+                        alert('Registro salvo com sucesso! ✅');
+                        
+                        // Recarregar página para mostrar os dados
+                        setTimeout(function() {
+                            location.reload();
+                        }, 300);
+                    }
+                }
+            } catch (error) {
+                console.error('Erro ao salvar:', error);
+                alert('Erro ao salvar: ' + error.message);
+            }
+        };
+        
+        window.toggleReminderSection = function(type) {
+            try {
+                var checkbox = document.getElementById(type + '-reminder-enabled');
+                var configDiv = document.getElementById(type + '-reminder-config');
+                if (checkbox && configDiv) {
+                    configDiv.style.display = checkbox.checked ? 'block' : 'none';
+                }
+            } catch(e) {}
+        };
+        
+        window.addReminderTime = function(type) {
+            try {
+                var timesContainer = document.getElementById(type + '-reminder-times');
+                if (timesContainer) {
+                    var newTimeRow = document.createElement('div');
+                    newTimeRow.className = 'reminder-time-row';
+                    newTimeRow.innerHTML = '<input type="time" class="reminder-time-input" required><button type="button" class="btn-remove-time" onclick="removeReminderTime(this)"><span class="material-icons">close</span></button>';
+                    timesContainer.appendChild(newTimeRow);
+                }
+            } catch(e) {}
+        };
+        
+        window.removeReminderTime = function(button) {
+            try {
+                var row = button.closest('.reminder-time-row');
+                if (row) {
+                    var timesContainer = row.parentElement;
+                    if (timesContainer && timesContainer.querySelectorAll('.reminder-time-row').length > 1) {
+                        row.remove();
+                    }
+                }
+            } catch(e) {}
+        };
+        
+        window.toggleInsulinUnits = function() {
+            try {
+                var checkbox = document.getElementById('glucose-insulin-taken');
+                var unitsGroup = document.getElementById('insulin-units-group');
+                var unitsInput = document.getElementById('glucose-insulin-units');
+                if (checkbox && unitsGroup && unitsInput) {
+                    unitsGroup.style.display = checkbox.checked ? 'block' : 'none';
+                    unitsInput.required = checkbox.checked;
+                }
+            } catch(e) {}
+        };
+        
+        console.log('Funções críticas definidas no HTML');
+    </script>
+    <script src="app.js" onerror="alert('Erro ao carregar app.js! Verifique o console.')"></script>
+    <script>
+        // Verificação após carregar app.js
+        window.addEventListener('load', function() {
+            console.log('Página carregada');
+            console.log('openAddDialog:', typeof window.openAddDialog);
+            console.log('saveRecord:', typeof window.saveRecord);
+            console.log('closeModal:', typeof window.closeModal);
+        });
+    </script>
 </body>
 </html>

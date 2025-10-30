@@ -1,3 +1,110 @@
+// ============================================
+// FUNÇÕES CRÍTICAS - DEFINIDAS PRIMEIRO
+// ============================================
+
+// Garantir que as funções estejam no escopo global IMEDIATAMENTE
+window.openAddDialog = function(type) {
+    const modal = document.getElementById('modal-' + type);
+    if (!modal) {
+        console.error('Modal modal-' + type + ' não encontrado!');
+        return;
+    }
+    modal.classList.add('active');
+    
+    if (type === 'medication' || type === 'supplement' || type === 'glucose') {
+        const timeInput = document.getElementById(type + '-time');
+        if (timeInput) {
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            timeInput.value = hours + ':' + minutes;
+        }
+    }
+    
+    // Resetar campos de lembrete (se existirem)
+    if (type === 'medication' || type === 'supplement') {
+        try {
+            const reminderCheckbox = document.getElementById(type + '-reminder-enabled');
+            const reminderConfig = document.getElementById(type + '-reminder-config');
+            if (reminderCheckbox) reminderCheckbox.checked = false;
+            if (reminderConfig) reminderConfig.style.display = 'none';
+        } catch(e) {}
+    }
+    
+    // Resetar campos específicos da glicose
+    if (type === 'glucose') {
+        try {
+            const insulinCheckbox = document.getElementById('glucose-insulin-taken');
+            const insulinUnitsGroup = document.getElementById('insulin-units-group');
+            if (insulinCheckbox) insulinCheckbox.checked = false;
+            if (insulinUnitsGroup) insulinUnitsGroup.style.display = 'none';
+        } catch(e) {}
+    }
+};
+
+window.closeModal = function(type) {
+    const modal = document.getElementById('modal-' + type);
+    if (modal) {
+        modal.classList.remove('active');
+        const form = document.getElementById('form-' + type);
+        if (form) form.reset();
+    }
+};
+
+// saveRecord será definida mais abaixo após o DataManager estar disponível
+
+window.toggleReminderSection = function(type) {
+    try {
+        const checkbox = document.getElementById(type + '-reminder-enabled');
+        const configDiv = document.getElementById(type + '-reminder-config');
+        if (checkbox && configDiv) {
+            configDiv.style.display = checkbox.checked ? 'block' : 'none';
+        }
+    } catch(e) {}
+};
+
+window.addReminderTime = function(type) {
+    try {
+        const timesContainer = document.getElementById(type + '-reminder-times');
+        if (timesContainer) {
+            const newTimeRow = document.createElement('div');
+            newTimeRow.className = 'reminder-time-row';
+            newTimeRow.innerHTML = '<input type="time" class="reminder-time-input" required><button type="button" class="btn-remove-time" onclick="removeReminderTime(this)"><span class="material-icons">close</span></button>';
+            timesContainer.appendChild(newTimeRow);
+        }
+    } catch(e) {}
+};
+
+window.removeReminderTime = function(button) {
+    try {
+        const row = button.closest('.reminder-time-row');
+        if (row) {
+            const timesContainer = row.parentElement;
+            if (timesContainer && timesContainer.querySelectorAll('.reminder-time-row').length > 1) {
+                row.remove();
+            }
+        }
+    } catch(e) {}
+};
+
+window.toggleInsulinUnits = function() {
+    try {
+        const checkbox = document.getElementById('glucose-insulin-taken');
+        const unitsGroup = document.getElementById('insulin-units-group');
+        const unitsInput = document.getElementById('glucose-insulin-units');
+        if (checkbox && unitsGroup && unitsInput) {
+            unitsGroup.style.display = checkbox.checked ? 'block' : 'none';
+            unitsInput.required = checkbox.checked;
+        }
+    } catch(e) {}
+};
+
+console.log('Funções críticas definidas');
+
+// ============================================
+// Código principal do aplicativo
+// ============================================
+
 class DataManager {
     constructor() {
         this.storageKeys = {
@@ -33,6 +140,8 @@ class DataManager {
 }
 
 const dataManager = new DataManager();
+// Expor dataManager globalmente para uso no HTML
+window.dataManager = dataManager;
 
 class ReminderManager {
     constructor() {
@@ -41,12 +150,13 @@ class ReminderManager {
         this.checkIntervalMs = 10000; // Verifica a cada 10 segundos para melhor precisão
         this.triggeredReminders = new Set(); // Rastreia lembretes já disparados hoje
         this.audioContext = null;
-        this.initAudioContext();
     }
 
     initAudioContext() {
         try {
-            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            if (!this.audioContext) {
+                this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
         } catch (e) {
             console.error('AudioContext não suportado:', e);
         }
@@ -99,10 +209,10 @@ class ReminderManager {
         const reminders = this.getAll();
         const now = new Date();
         const currentDay = now.getDay().toString(); // Converter para string para comparação
-        const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-        const todayKey = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
+        const currentTime = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+        const todayKey = now.getFullYear() + '-' + now.getMonth() + '-' + now.getDate();
 
-        reminders.forEach(reminder => {
+        reminders.forEach(function(reminder) {
             if (!reminder.enabled) return;
 
             // Verificar se é o dia correto (comparar strings)
@@ -112,13 +222,13 @@ class ReminderManager {
             if (!reminder.times || !reminder.times.includes(currentTime)) return;
 
             // Verificar se já disparou hoje neste horário
-            const reminderKey = `${reminder.id}-${currentTime}-${todayKey}`;
+            const reminderKey = reminder.id + '-' + currentTime + '-' + todayKey;
             if (this.triggeredReminders.has(reminderKey)) return;
 
             // Disparar alarme
             this.triggerAlarm(reminder);
             this.triggeredReminders.add(reminderKey);
-        });
+        }.bind(this));
 
         // Limpar lembretes antigos do cache (meia-noite)
         if (now.getHours() === 0 && now.getMinutes() === 0) {
@@ -132,176 +242,97 @@ class ReminderManager {
             Notification.requestPermission();
         }
 
-        // Tocar voz do lembrete
-        const textToSpeak = reminder.reminderText || reminder.description || `Lembrete: ${reminder.name}`;
-        this.playAlarmSound(textToSpeak);
+        // Tocar som de alarme
+        this.playAlarmSound();
 
         // Mostrar notificação do navegador
+        var reminderText = reminder.description || 'Hora de tomar!';
         if ('Notification' in window && Notification.permission === 'granted') {
-            new Notification(`Lembrete: ${reminder.name}`, {
-                body: textToSpeak,
+            new Notification('Lembrete: ' + reminder.name, {
+                body: reminderText,
                 icon: '/favicon.ico',
                 tag: reminder.id,
                 requireInteraction: true
             });
         } else {
             // Fallback: alert simples
-            alert(`Lembrete: ${reminder.name}\n${textToSpeak}`);
+            alert('Lembrete: ' + reminder.name + '\n' + reminderText);
         }
     }
 
-    playAlarmSound(reminderText) {
-        // Usar Web Speech API para texto-para-voz
-        if ('speechSynthesis' in window) {
-            try {
-                // Cancelar qualquer fala anterior
-                window.speechSynthesis.cancel();
-                
-                // Obter vozes disponíveis (pode precisar aguardar o carregamento)
-                let voices = window.speechSynthesis.getVoices();
-                
-                // Se não houver vozes, aguardar o evento de carregamento
-                if (voices.length === 0) {
-                    const loadVoices = () => {
-                        voices = window.speechSynthesis.getVoices();
-                        this.speakWithVoice(reminderText, voices);
-                    };
-                    
-                    window.speechSynthesis.onvoiceschanged = loadVoices;
-                    // Tentar novamente após um pequeno delay
-                    setTimeout(() => {
-                        loadVoices();
-                    }, 100);
-                    return;
-                }
-                
-                this.speakWithVoice(reminderText, voices);
-                
-            } catch (e) {
-                console.error('Erro ao usar síntese de voz:', e);
-                // Fallback para som de alarme se TTS falhar
-                this.playFallbackSound();
-            }
-        } else {
-            console.warn('SpeechSynthesis não suportado, usando som de alarme');
-            this.playFallbackSound();
-        }
-    }
-    
-    speakWithVoice(reminderText, voices) {
-        try {
-                
-            // Procurar por voz feminina (preferência para português brasileiro)
-            let selectedVoice = null;
-            
-            // Primeira tentativa: voz feminina em português brasileiro
-            selectedVoice = voices.find(voice => 
-                (voice.lang.includes('pt') || voice.lang.includes('BR')) && 
-                (voice.name.toLowerCase().includes('female') || 
-                 voice.name.toLowerCase().includes('feminina') ||
-                 voice.name.toLowerCase().includes('fêmea') ||
-                 voice.gender === 'female')
-            );
-            
-            // Segunda tentativa: qualquer voz feminina
-            if (!selectedVoice) {
-                selectedVoice = voices.find(voice => 
-                    voice.gender === 'female' || 
-                    voice.name.toLowerCase().includes('female') ||
-                    voice.name.toLowerCase().includes('feminina')
-                );
-            }
-            
-            // Terceira tentativa: qualquer voz em português
-            if (!selectedVoice && voices.length > 0) {
-                selectedVoice = voices.find(voice => 
-                    voice.lang.includes('pt') || voice.lang.includes('BR')
-                );
-            }
-            
-            // Se não encontrou, usar a primeira voz disponível
-            if (!selectedVoice && voices.length > 0) {
-                selectedVoice = voices[0];
-            }
-            
-            // Criar utterance
-            const utterance = new SpeechSynthesisUtterance(reminderText || 'Lembrete: Hora do seu medicamento');
-            
-            if (selectedVoice) {
-                utterance.voice = selectedVoice;
-            }
-            
-            // Configurar parâmetros da voz
-            utterance.lang = 'pt-BR';
-            utterance.pitch = 1.2; // Tom um pouco mais alto (mais feminino)
-            utterance.rate = 0.9; // Velocidade um pouco mais lenta para clareza
-            utterance.volume = 1.0; // Volume máximo
-            
-            // Falar o texto
-            window.speechSynthesis.speak(utterance);
-            
-            // Repetir após 3 segundos (uma vez)
-            setTimeout(() => {
-                const repeatUtterance = new SpeechSynthesisUtterance(reminderText || 'Lembrete: Hora do seu medicamento');
-                if (selectedVoice) {
-                    repeatUtterance.voice = selectedVoice;
-                }
-                repeatUtterance.lang = 'pt-BR';
-                repeatUtterance.pitch = 1.2;
-                repeatUtterance.rate = 0.9;
-                repeatUtterance.volume = 1.0;
-                window.speechSynthesis.speak(repeatUtterance);
-            }, 3000);
-            
-        } catch (e) {
-            console.error('Erro ao usar síntese de voz:', e);
-            // Fallback para som de alarme se TTS falhar
-            this.playFallbackSound();
-        }
-    }
-
-    playFallbackSound() {
-        // Som de fallback caso TTS não esteja disponível
+    playAlarmSound() {
+        // Inicializar AudioContext se necessário
         if (!this.audioContext) {
             this.initAudioContext();
             if (!this.audioContext) return;
         }
 
         try {
-            const oscillator = this.audioContext.createOscillator();
-            const gainNode = this.audioContext.createGain();
+            // Tocar som de alarme 3 vezes
+            var playBeep = function(times, delay) {
+                if (times <= 0) return;
+                
+                var oscillator = this.audioContext.createOscillator();
+                var gainNode = this.audioContext.createGain();
 
-            oscillator.connect(gainNode);
-            gainNode.connect(this.audioContext.destination);
+                oscillator.connect(gainNode);
+                gainNode.connect(this.audioContext.destination);
 
-            oscillator.frequency.value = 800;
-            oscillator.type = 'sine';
+                oscillator.frequency.value = 800;
+                oscillator.type = 'sine';
 
-            gainNode.gain.setValueAtTime(0.3, this.audioContext.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.5);
+                gainNode.gain.setValueAtTime(0.3, this.audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.5);
 
-            oscillator.start(this.audioContext.currentTime);
-            oscillator.stop(this.audioContext.currentTime + 0.5);
+                oscillator.start(this.audioContext.currentTime);
+                oscillator.stop(this.audioContext.currentTime + 0.5);
+                
+                if (times > 1) {
+                    setTimeout(function() {
+                        playBeep.call(this, times - 1, delay);
+                    }.bind(this), delay);
+                }
+            }.bind(this);
+            
+            playBeep(3, 600);
+            
         } catch (e) {
-            console.error('Erro ao tocar som de fallback:', e);
+            console.error('Erro ao tocar alarme:', e);
         }
     }
 }
 
-const reminderManager = new ReminderManager();
+// Tentar criar ReminderManager, mas não bloquear se houver erro
+let reminderManager;
+try {
+    reminderManager = new ReminderManager();
+} catch (e) {
+    console.error('Erro ao criar ReminderManager:', e);
+    // Criar um objeto vazio para evitar erros
+    reminderManager = {
+        getAll: function() { return []; },
+        save: function() {},
+        delete: function() {},
+        startChecking: function() {},
+        checkReminders: function() {}
+    };
+}
 
 function initTabs() {
     const tabButtons = document.querySelectorAll('.tab-button');
     const tabContents = document.querySelectorAll('.tab-content');
 
-    tabButtons.forEach(button => {
-        button.addEventListener('click', () => {
+    tabButtons.forEach(function(button) {
+        button.addEventListener('click', function() {
             const tabId = button.getAttribute('data-tab');
-            tabButtons.forEach(btn => btn.classList.remove('active'));
-            tabContents.forEach(content => content.classList.remove('active'));
+            tabButtons.forEach(function(btn) { btn.classList.remove('active'); });
+            tabContents.forEach(function(content) { content.classList.remove('active'); });
             button.classList.add('active');
-            document.getElementById(tabId).classList.add('active');
+            const targetTab = document.getElementById(tabId);
+            if (targetTab) {
+                targetTab.classList.add('active');
             loadRecords(tabId);
+            }
         });
     });
 }
@@ -313,7 +344,7 @@ function formatDate(dateString) {
     const year = date.getFullYear();
     const hours = String(date.getHours()).padStart(2, '0');
     const minutes = String(date.getMinutes()).padStart(2, '0');
-    return `${day}/${month}/${year} ${hours}:${minutes}`;
+    return day + '/' + month + '/' + year + ' ' + hours + ':' + minutes;
 }
 
 function loadRecords(type) {
@@ -336,11 +367,14 @@ function loadRecords(type) {
 
     emptyState.style.display = 'none';
 
-    records.forEach(record => {
+    records.forEach(function(record) {
         const card = createRecordCard(type, record);
         listContainer.appendChild(card);
     });
 }
+
+// Expor funções importantes globalmente após serem definidas
+window.loadRecords = loadRecords;
 
 function getListId(type) {
     const mapping = {
@@ -397,10 +431,10 @@ function createRecordCard(type, record) {
         case 'medication':
         case 'supplement':
             title.textContent = record.name;
-            subtitle.textContent = `Dose: ${record.dose} | Horário: ${record.time}`;
+            subtitle.textContent = 'Dose: ' + record.dose + ' | Horário: ' + record.time;
             break;
         case 'glucose':
-            title.textContent = `${record.value} mg/dL`;
+            title.textContent = record.value + ' mg/dL';
             const glucoseTypeLabels = {
                 'jejum': 'Jejum',
                 'antes-almoco': 'Antes do Almoço',
@@ -418,15 +452,15 @@ function createRecordCard(type, record) {
             }
             
             if (record.time) {
-                glucoseSubtitle += ` | ${record.time}`;
+                glucoseSubtitle += ' | ' + record.time;
             }
             if (record.insulinTaken && record.insulinUnits !== null && record.insulinUnits !== undefined) {
-                glucoseSubtitle += ` | Insulina: ${record.insulinUnits} unidades`;
+                glucoseSubtitle += ' | Insulina: ' + record.insulinUnits + ' unidades';
             }
             subtitle.textContent = glucoseSubtitle;
             break;
         case 'blood-pressure':
-            title.textContent = `${record.systolic}/${record.diastolic}`;
+            title.textContent = record.systolic + '/' + record.diastolic;
             subtitle.textContent = 'mmHg';
             break;
     }
@@ -449,26 +483,30 @@ function createRecordCard(type, record) {
     return card;
 }
 
-function openAddDialog(type) {
-    const modal = document.getElementById(`modal-${type}`);
-    if (modal) {
+// Garantir que as funções estejam no escopo global
+window.openAddDialog = function(type) {
+    const modal = document.getElementById('modal-' + type);
+    if (!modal) {
+        console.error('Modal modal-' + type + ' não encontrado!');
+        return;
+    }
         modal.classList.add('active');
         
         if (type === 'medication' || type === 'supplement' || type === 'glucose') {
-            const timeInput = document.getElementById(`${type}-time`);
+            const timeInput = document.getElementById(type + '-time');
             if (timeInput) {
                 const now = new Date();
                 const hours = String(now.getHours()).padStart(2, '0');
                 const minutes = String(now.getMinutes()).padStart(2, '0');
-                timeInput.value = `${hours}:${minutes}`;
+                timeInput.value = hours + ':' + minutes;
             }
         }
         
         // Resetar campos de lembrete
         if (type === 'medication' || type === 'supplement') {
-            const reminderCheckbox = document.getElementById(`${type}-reminder-enabled`);
-            const reminderConfig = document.getElementById(`${type}-reminder-config`);
-            const reminderTimes = document.getElementById(`${type}-reminder-times`);
+            const reminderCheckbox = document.getElementById(type + '-reminder-enabled');
+            const reminderConfig = document.getElementById(type + '-reminder-config');
+            const reminderTimes = document.getElementById(type + '-reminder-times');
             
             if (reminderCheckbox) {
                 reminderCheckbox.checked = false;
@@ -478,26 +516,19 @@ function openAddDialog(type) {
             }
             
             // Resetar dias
-            const dayCheckboxes = reminderConfig?.querySelectorAll('.reminder-day');
-            if (dayCheckboxes) {
-                dayCheckboxes.forEach(cb => {
+            if (reminderConfig) {
+                const dayCheckboxes = reminderConfig.querySelectorAll('.reminder-day');
+                dayCheckboxes.forEach(function(cb) {
                     cb.checked = false;
                     cb.required = false;
                 });
-            }
-            
-            // Resetar campo de texto
-            const reminderTextInput = document.getElementById(`${type}-reminder-text`);
-            if (reminderTextInput) {
-                reminderTextInput.value = '';
-                reminderTextInput.required = false;
             }
             
             // Resetar horários (manter apenas um)
             if (reminderTimes) {
                 const timeRows = reminderTimes.querySelectorAll('.reminder-time-row');
                 if (timeRows.length > 1) {
-                    timeRows.forEach((row, index) => {
+                    timeRows.forEach(function(row, index) {
                         if (index > 0) row.remove();
                     });
                 }
@@ -508,12 +539,6 @@ function openAddDialog(type) {
                 }
             }
             
-            // Resetar campo de texto do lembrete
-            const reminderTextInput = document.getElementById(`${type}-reminder-text`);
-            if (reminderTextInput) {
-                reminderTextInput.value = '';
-                reminderTextInput.required = false;
-            }
         }
         
         // Resetar campos específicos da glicose
@@ -532,38 +557,11 @@ function openAddDialog(type) {
                 insulinUnitsInput.required = false;
             }
         }
-    }
-}
+};
 
-function toggleInsulinUnits() {
-    const checkbox = document.getElementById('glucose-insulin-taken');
-    const unitsGroup = document.getElementById('insulin-units-group');
-    const unitsInput = document.getElementById('glucose-insulin-units');
-    
-    if (checkbox && unitsGroup && unitsInput) {
-        if (checkbox.checked) {
-            unitsGroup.style.display = 'block';
-            unitsInput.required = true;
-        } else {
-            unitsGroup.style.display = 'none';
-            unitsInput.required = false;
-            unitsInput.value = '';
-        }
-    }
-}
+// closeModal já foi definido acima
 
-function closeModal(type) {
-    const modal = document.getElementById(`modal-${type}`);
-    if (modal) {
-        modal.classList.remove('active');
-        const form = document.getElementById(`form-${type}`);
-        if (form) {
-            form.reset();
-        }
-    }
-}
-
-function saveRecord(event, type) {
+window.saveRecord = function(event, type) {
     event.preventDefault();
 
     let record = {};
@@ -634,11 +632,15 @@ function deleteRecord(type, id) {
         
         // Buscar o registro para ver se tem lembrete associado
         const records = dataManager.getAll(dataType);
-        const record = records.find(r => r.id === id);
+        const record = records.find(function(r) { return r.id === id; });
         
         // Deletar lembrete se existir
-        if (record && record.reminderId) {
-            reminderManager.delete(record.reminderId);
+        if (record && record.reminderId && reminderManager) {
+            try {
+                reminderManager.delete(record.reminderId);
+            } catch (e) {
+                console.error('Erro ao deletar lembrete:', e);
+            }
         }
         
         dataManager.delete(dataType, id);
@@ -646,34 +648,40 @@ function deleteRecord(type, id) {
     }
 }
 
-document.addEventListener('click', (e) => {
+document.addEventListener('click', function(e) {
     if (e.target.classList.contains('modal')) {
         e.target.classList.remove('active');
     }
 });
 
-document.addEventListener('keydown', (e) => {
+document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
-        document.querySelectorAll('.modal.active').forEach(modal => {
+        document.querySelectorAll('.modal.active').forEach(function(modal) {
             modal.classList.remove('active');
         });
     }
 });
 
-function saveReminderForRecord(type, record) {
-    const enabledCheckbox = document.getElementById(`${type}-reminder-enabled`);
+window.saveReminderForRecord = function(type, record) {
+    if (!reminderManager) return; // Pular se ReminderManager não estiver disponível
+    
+    const enabledCheckbox = document.getElementById(type + '-reminder-enabled');
     if (!enabledCheckbox || !enabledCheckbox.checked) {
         // Remover lembrete anterior se existir
         if (record.reminderId) {
-            reminderManager.delete(record.reminderId);
+            try {
+                reminderManager.delete(record.reminderId);
+            } catch (e) {
+                console.error('Erro ao deletar lembrete:', e);
+            }
         }
         return;
     }
 
     // Coletar dias selecionados
-    const daysContainer = document.getElementById(`${type}-reminder-config`);
+    const daysContainer = document.getElementById(type + '-reminder-config');
     const dayCheckboxes = daysContainer.querySelectorAll('.reminder-day:checked');
-    const days = Array.from(dayCheckboxes).map(cb => cb.value);
+    const days = Array.from(dayCheckboxes).map(function(cb) { return cb.value; });
     
     if (days.length === 0) {
         alert('Por favor, selecione pelo menos um dia da semana para o lembrete.');
@@ -681,48 +689,43 @@ function saveReminderForRecord(type, record) {
     }
 
     // Coletar horários
-    const timesContainer = document.getElementById(`${type}-reminder-times`);
+    const timesContainer = document.getElementById(type + '-reminder-times');
     const timeInputs = timesContainer.querySelectorAll('.reminder-time-input');
     const times = Array.from(timeInputs)
-        .map(input => input.value)
-        .filter(time => time !== '');
+        .map(function(input) { return input.value; })
+        .filter(function(time) { return time !== ''; });
 
     if (times.length === 0) {
         alert('Por favor, informe pelo menos um horário para o lembrete.');
         throw new Error('Horários não informados');
     }
 
-    // Coletar texto do lembrete
-    const reminderTextInput = document.getElementById(`${type}-reminder-text`);
-    const reminderText = reminderTextInput ? reminderTextInput.value.trim() : '';
-    
-    if (!reminderText) {
-        alert('Por favor, informe o texto do lembrete que será falado.');
-        throw new Error('Texto do lembrete não informado');
-    }
 
     // Criar ou atualizar lembrete
-    const reminderId = record.reminderId || `reminder_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const reminderId = record.reminderId || 'reminder_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
     
     const reminder = {
         id: reminderId,
         recordId: record.id,
         recordType: type,
         name: record.name,
-        description: `${record.name} - ${record.dose}`,
-        reminderText: reminderText, // Texto que será falado
+        description: record.name + ' - ' + record.dose,
         enabled: true,
         days: days,
         times: times
     };
 
-    reminderManager.save(reminder);
-    record.reminderId = reminderId;
-}
+    try {
+        reminderManager.save(reminder);
+        record.reminderId = reminderId;
+    } catch (e) {
+        console.error('Erro ao salvar lembrete:', e);
+    }
+};
 
-function toggleReminderSection(type) {
-    const checkbox = document.getElementById(`${type}-reminder-enabled`);
-    const configDiv = document.getElementById(`${type}-reminder-config`);
+window.toggleReminderSection = function(type) {
+    const checkbox = document.getElementById(type + '-reminder-enabled');
+    const configDiv = document.getElementById(type + '-reminder-config');
     
     if (checkbox && configDiv) {
         configDiv.style.display = checkbox.checked ? 'block' : 'none';
@@ -731,23 +734,19 @@ function toggleReminderSection(type) {
         if (!checkbox.checked) {
             const dayCheckboxes = configDiv.querySelectorAll('.reminder-day');
             const timeInputs = configDiv.querySelectorAll('.reminder-time-input');
-            const reminderTextInput = document.getElementById(`${type}-reminder-text`);
-            dayCheckboxes.forEach(cb => cb.required = false);
-            timeInputs.forEach(input => input.required = false);
-            if (reminderTextInput) reminderTextInput.required = false;
+            dayCheckboxes.forEach(function(cb) { cb.required = false; });
+            timeInputs.forEach(function(input) { input.required = false; });
         } else {
             const dayCheckboxes = configDiv.querySelectorAll('.reminder-day');
             const timeInputs = configDiv.querySelectorAll('.reminder-time-input');
-            const reminderTextInput = document.getElementById(`${type}-reminder-text`);
-            dayCheckboxes.forEach(cb => cb.required = true);
-            timeInputs.forEach(input => input.required = true);
-            if (reminderTextInput) reminderTextInput.required = true;
+            dayCheckboxes.forEach(function(cb) { cb.required = true; });
+            timeInputs.forEach(function(input) { input.required = true; });
         }
     }
 }
 
-function addReminderTime(type) {
-    const timesContainer = document.getElementById(`${type}-reminder-times`);
+window.addReminderTime = function(type) {
+    const timesContainer = document.getElementById(type + '-reminder-times');
     if (!timesContainer) return;
 
     const newTimeRow = document.createElement('div');
@@ -761,9 +760,9 @@ function addReminderTime(type) {
     timesContainer.appendChild(newTimeRow);
 }
 
-function removeReminderTime(button) {
+window.removeReminderTime = function(button) {
     const row = button.closest('.reminder-time-row');
-    const timesContainer = row?.parentElement;
+    const timesContainer = row ? row.parentElement : null;
     
     // Não permitir remover se for o único horário
     if (timesContainer && timesContainer.querySelectorAll('.reminder-time-row').length > 1) {
@@ -773,31 +772,39 @@ function removeReminderTime(button) {
     }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+// Inicialização quando o DOM estiver pronto
+document.addEventListener('DOMContentLoaded', function() {
+    try {
+        console.log('DOM carregado, inicializando...');
+        
     initTabs();
     const activeTab = document.querySelector('.tab-button.active');
     if (activeTab) {
         const tabId = activeTab.getAttribute('data-tab');
         loadRecords(tabId);
-    }
-    
-    // Solicitar permissão para notificações e iniciar sistema de lembretes
-    if ('Notification' in window && Notification.permission === 'default') {
-        Notification.requestPermission();
-    }
-    
-    // Garantir que as vozes estejam carregadas
-    if ('speechSynthesis' in window) {
-        window.speechSynthesis.getVoices(); // Força o carregamento inicial
-        window.speechSynthesis.onvoiceschanged = () => {
-            // Vozes carregadas
-        };
-    }
-    
-    // Iniciar verificação de lembretes
-    const reminders = reminderManager.getAll();
-    if (reminders.length > 0) {
-        reminderManager.startChecking();
+        }
+        
+        // Solicitar permissão para notificações e iniciar sistema de lembretes
+        if ('Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission();
+        }
+        
+        
+        // Iniciar verificação de lembretes
+        try {
+            if (reminderManager) {
+                const reminders = reminderManager.getAll();
+                if (reminders && reminders.length > 0) {
+                    reminderManager.startChecking();
+                }
+            }
+        } catch (e) {
+            console.error('Erro ao iniciar lembretes:', e);
+        }
+        
+        console.log('Inicialização completa');
+    } catch (error) {
+        console.error('Erro na inicialização:', error);
     }
 });
 
