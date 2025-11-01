@@ -4,13 +4,13 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <!-- Open Graph para WhatsApp e redes sociais TROCAR ESSAS INFOS-->
-  <meta property="og:title" content="Galeria de Fotos do Gael - 4 anos" />
-  <meta property="og:description" content="Veja e baixe as fotos da festa do Gael!" />
-  <meta property="og:image" content="https://doceamorfotografia.s3.sa-east-1.amazonaws.com/gael-4-anos/Gael-4-anos-previa-zap.jpg" />
-  <meta property="og:url" content="https://doceamorfotografia.github.io/gael-4-anos" />
+  <meta property="og:title" content="Galeria de Fotos do Vinícius - 7 anos" />
+  <meta property="og:description" content="Veja e baixe as fotos da festa do Vinícius!" />
+  <meta property="og:image" content="https://doceamorfotografia.s3.sa-east-1.amazonaws.com/vinicius-7-anos/Vinicius-7-anos-previa-zap.jpg" />
+  <meta property="og:url" content="https://doceamorfotografia.github.io/vinicius-7-anos" />
   <meta property="og:type" content="website" />
 
-  <title>Galeria de Fotos do Gael - 4 anos</title> <!-- TROCAR ESSA INFO-->
+  <title>Galeria de Fotos do Vinícius - 7 anos</title> <!-- TROCAR ESSA INFO-->
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
@@ -25,10 +25,10 @@
 
   <!-- Cabeçalho TROCAR O NOME E IDADE DO ANIVERSARIANTE E A IMAGEM DE CABEÇALHO-->
   <header class="relative w-full h-56 sm:h-64 md:h-80 overflow-hidden">
-    <img src="https://doceamorfotografia.s3.sa-east-1.amazonaws.com/gael-4-anos/baixa/Gael-4-anos-baixa-007.jpg" 
+    <img src="https://doceamorfotografia.s3.sa-east-1.amazonaws.com/vinicius-7-anos/baixa/Vinicius-7-anos-baixa-012.jpg" 
          alt="Capa" class="w-full h-full object-cover"/>
     <div class="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center px-4">
-      <h1 class="text-white text-2xl sm:text-3xl md:text-5xl font-bold text-center">Gael 4 anos</h1>
+      <h1 class="text-white text-2xl sm:text-3xl md:text-5xl font-bold text-center">Vinícius 7 anos</h1>
     </div>
   </header>
 
@@ -39,7 +39,7 @@
 
   <!-- Botões de ação TROCAR LINK-->
   <div class="container mx-auto px-4 py-6 flex flex-col sm:flex-row justify-center gap-4">
-    <a href="https://doceamorfotografia.s3.sa-east-1.amazonaws.com/gael-4-anos/gael-4-anos.zip" 
+    <a href="https://doceamorfotografia.s3.sa-east-1.amazonaws.com/vinicius-7-anos/vinicius-7-anos.zip" 
        class="flex items-center justify-center gap-2 bg-white/30 backdrop-blur-sm border border-white/50 text-blue-400 text-sm px-4 py-2 rounded-lg shadow hover:bg-white/40 transition transform hover:scale-105"
        download>
       📥 Download de Todas as Fotos
@@ -161,11 +161,11 @@
   <script>
     // Array de imagens - AQUI TEM QUE TROCAR O LINK E A QUANTIDADE DE IMAGENS
     const images = [];
-    for (let i = 1; i <= 288; i++) {
+    for (let i = 1; i <= 377; i++) {
       const num = i.toString().padStart(3, '0');
       images.push({
-        baixa: `https://doceamorfotografia.s3.sa-east-1.amazonaws.com/gael-4-anos/baixa/Gael-4-anos-baixa-${num}.jpg`,
-        alta: `https://doceamorfotografia.s3.sa-east-1.amazonaws.com/gael-4-anos/alta/Gael-4-anos-${num}.jpg`
+        baixa: `https://doceamorfotografia.s3.sa-east-1.amazonaws.com/vinicius-7-anos/baixa/Vinicius-7-anos-baixa-resolução-${num}.jpg`,
+        alta: `https://doceamorfotografia.s3.sa-east-1.amazonaws.com/vinicius-7-anos/alta/Vinicius-7-anos-alta-resolução-${num}.jpg`
       });
     }
 
